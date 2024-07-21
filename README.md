@@ -2,14 +2,14 @@ The project is related to solve path planning task on key points that were extra
 
 Here you can see how different algorithms perform:
 
-A star algorithm performance:
+A* (A-star) algorithm performance:
 ![Astar](pathPlanningAstarWithObstacle1.jpg)
 
-Djikstra algorithm performance with 1 obstacle:
+Djikstra's algorithm performance with 1 obstacle:
 ![Djikstra1](pathPlanningDjikstraWithObstacle2.jpg)
 
-Djikstra algorithm performance with 1 shifted obstacle:
+Djikstra's algorithm performance with 1 shifted obstacle:
 ![Djikstra2](pathPlanningDjikstraWithObstacle1.jpg)
 
-Djikstra algorithm performance with 2 obstacles:
+Djikstra's algorithm performance with 2 obstacles:
 ![Djikstra3](pathPlanningDjikstraWithObstacle3.jpg)
