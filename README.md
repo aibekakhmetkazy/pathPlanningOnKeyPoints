@@ -6,10 +6,10 @@ A star algorithm performance:
 ![Astar](pathPlanningAstarWithObstacle1.jpg)
 
 Djikstra algorithm performance with 1 obstacle:
-![Djikstra1](pathPlanningDjikstraWithObstacle1.jpg)
+![Djikstra1](pathPlanningDjikstraWithObstacle2.jpg)
 
 Djikstra algorithm performance with 1 shifted obstacle:
-![Djikstra2](pathPlanningDjikstraWithObstacle2.jpg)
+![Djikstra2](pathPlanningDjikstraWithObstacle1.jpg)
 
 Djikstra algorithm performance with 2 obstacles:
 ![Djikstra3](pathPlanningDjikstraWithObstacle3.jpg)
