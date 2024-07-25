@@ -5,9 +5,7 @@ from collections import deque
 import time
 
 startTime = time.time()
-# read input image
 img = cv2.imread('high_resolution_image17.jpg')
-# convert the image to grayscale
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 # Initiate SIFT object with default values
@@ -16,43 +14,30 @@ gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 # kp = sift.detect(gray, None)
 # # draw keypoints in image
 # img2 = cv2.drawKeypoints(gray, kp, None, flags=0)
-# # display the image with keypoints drawn on it
-# cv2.imshow("SIFT", img2)
-# cv2.waitKey()
-# # cv2.destroyAllWindows()
 
 # # Applying the function 
 # orb = cv2.ORB_create(nfeatures=2000) 
 # kp, des = orb.detectAndCompute(gray, None) 
 # # Drawing the keypoints 
-# kp_image = cv2.drawKeypoints(img, kp, None, color=(0, 255, 0), flags=0) 
-# cv2.imshow('ORB', kp_image) 
-# cv2.waitKey() 
-# # # cv2.destroyAllWindows()
+# kp_image = cv2.drawKeypoints(img, kp, None, color=(0, 255, 0), flags=0)
 
 # fast = cv2.FastFeatureDetector_create() 
 # fast.setNonmaxSuppression(False) 
 # # # Drawing the keypoints 
 # kp = fast.detect(gray, None) 
-# kp_image = cv2.drawKeypoints(img, kp, None, color=(0, 255, 0)) 
-# cv2.imshow('FAST', kp_image) 
-# cv2.waitKey() 
+# kp_image = cv2.drawKeypoints(img, kp, None, color=(0, 255, 0))
 
 akaze = cv2.AKAZE_create()
 keypoints, descriptors = akaze.detectAndCompute(img, None)
 kp_image = cv2.drawKeypoints(img, keypoints, None, color=(0, 255, 0), flags=0) 
 
-# cv2.imshow('AKAZE', kp_image)
-# cv2.waitKey(0)
-# cv2.destroyAllWindows()
 # cv2.imwrite('akaze.jpg', kp_image)
 
 pts = cv2.KeyPoint_convert(keypoints)
 x, y = pts[:, 0], pts[:, 1]
-# print('X coordinates:', x)
-# print('Y coordinates:', y)
 
 ### Here goes A* algo for path planning ###
+### Thanks to https://github.com/VikashPR/18CSC305J-AI/blob/main/A_Star-BFS.py for code parts
 
 class Graph:
     # example of adjacency list (or rather map)
@@ -119,7 +104,6 @@ class Graph:
                     n = parents[n]
 
                 reconst_path.append(start_node)
-                # dist += adjacency_list[start_node][1]
 
                 reconst_path.reverse()
                 print('\nDistance to cover:', round(dist[-1], 3))
@@ -182,26 +166,7 @@ def adjacencyListCreation(pts, startx, starty, finalx, finaly):
                        (obstacle[1] - pointsAndCoordinates[i][1]) ** 2) ** .5, 2)
             if d <= rad:
                 obstacles.append(i)
-
-    # This part is for calculation of distance with which
-    # we can find at least 1 edge for each vertex (Without obstacles)
-    # maxAmongMinDists = float('-inf')
-    # listOfMin = []
-    # for i in range(1, N + 1, 10):
-    #     minBetweenEdges = float('inf')
-    #     for j in range(1, N + 1, 10):
-    #         if i != j and i not in obstacles and j not in obstacles:
-    #             d = round(((pointsAndCoordinates[i][0] - pointsAndCoordinates[j][0]) ** 2 +
-    #                        (pointsAndCoordinates[i][1] - pointsAndCoordinates[j][1]) ** 2) ** .5, 2)
-    #             if d < minBetweenEdges:
-    #                 minBetweenEdges = d
-    #     if minBetweenEdges < float('inf'):
-    #         listOfMin.append(minBetweenEdges)
-    #     if minBetweenEdges > maxAmongMinDists:
-    #         maxAmongMinDists = minBetweenEdges
-    # avgAmongMinDists = np.mean(listOfMin)
-    # print('Average distance among mins:', avgAmongMinDists)
-
+    #region File
     ### For execution with different conditions and to form list of edges this region has to be uncommented ###
     # adjList = []
     # fileStart = time.time()
@@ -215,7 +180,7 @@ def adjacencyListCreation(pts, startx, starty, finalx, finaly):
     #                 # f.write("{} {} {}\n".format(i, j, dist))
     #     f.write("\n".join([" ".join(map(str, a)) for a in adjList]))
     # print('points.txt file creation took:', round(time.time() - fileStart, 2))
-    ### end region ###
+    #endregion
 
     f = open('points.txt')
     lines = f.read().splitlines()
