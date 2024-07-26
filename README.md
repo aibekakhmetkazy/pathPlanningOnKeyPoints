@@ -1,4 +1,4 @@
-The project is related to solve path planning task on key points that were extracted from satellite images using AKAZE feature extractor
+The project is related to solve path planning task using A-star and fast Djikstra's algorithm awith priority queues on key points that were extracted from satellite images using SIFT, AKAZE and ORB feature extractors.
 
 Here you can see how different algorithms perform:
 
