@@ -2,14 +2,14 @@ The project is related to solve path planning task on key points that were extra
 
 Here you can see how different algorithms perform:
 
-A* (A-star) algorithm performance:
-![Astar](/Images/pathPlanningAstarWithObstacle1.jpg)
+A* (A-star) algorithm performance with SIFT key points extractor on satellite image at a low zoom level(16):
+![Astar](/Images/Astar3Sift16.jpg)
 
-Djikstra's algorithm performance with 1 obstacle:
-![Djikstra1](/Images/pathPlanningDjikstraWithObstacle2.jpg)
+A* (A-star) algorithm performance with SIFT key points extractor on satellite image at a high zoom level(17):
+![Astar](/Images/Astar3Sift17.jpg)
 
-Djikstra's algorithm performance with 1 shifted obstacle:
-![Djikstra2](/Images/pathPlanningDjikstraWithObstacle1.jpg)
+Djikstra's algorithm performance with SIFT key points extractor on satellite image at a low zoom level(16):
+![Djikstra1](/Images/Djikstra3Sift16.jpg)
 
-Djikstra's algorithm performance with 2 obstacles:
-![Djikstra3](/Images/pathPlanningDjikstraWithObstacle3.jpg)
+Djikstra's algorithm performance with SIFT key points extractor on satellite image at a high zoom level(17):
+![Djikstra2](/Images/Djikstra3Sift17.jpg)
