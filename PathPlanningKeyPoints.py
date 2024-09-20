@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import time
 
 startTime = time.time()
-img = cv2.imread('high_resolution_image17.jpg')
+img = cv2.imread('high_resolution_image16.jpg')
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 # Initiate SIFT object with default values
@@ -31,7 +31,6 @@ pts = cv2.KeyPoint_convert(keypoints)
 x, y = pts[:, 0], pts[:, 1]
 
 ### Here goes the creation of the graph edges ###
-
 def graphCreation(pts, startx, starty, finalx, finaly):
     pointsAndCoordinates = [[]]
     n = len(pts[:, 0])
@@ -59,42 +58,45 @@ def graphCreation(pts, startx, starty, finalx, finaly):
             if d <= rad:
                 obstacles.append(i)
 
-    #region File
-    # For execution with different conditions and to form list of edges this region has to be uncommented ###
-    adjList = []
-    fileStart = time.time()
-    with open('points16.txt', 'w') as f:  # Writing all the vertexes and distances into 1 txt file for matrix construction
-        for i in range(1, N):
-            for j in range(i+1, N+1):
-                dist = round(((pointsAndCoordinates[i][0] - pointsAndCoordinates[j][0])**2 +
-                        (pointsAndCoordinates[i][1] - pointsAndCoordinates[j][1])**2)**.5, 2)
-                if dist < minRad and i not in obstacles and j not in obstacles:
-                    adjList.append([i, j, dist])
-                    # f.write("{} {} {}\n".format(i, j, dist))
-        f.write("\n".join([" ".join(map(str, a)) for a in adjList]))
-    print('.txt file creation took:',round(time.time()-fileStart, 2))
+    #region GraphConstruction
+    graph = []
+    for i in range(1, N):
+        for j in range(i+1, N+1):
+            dist = round(((pointsAndCoordinates[i][0] - pointsAndCoordinates[j][0])**2 +
+                    (pointsAndCoordinates[i][1] - pointsAndCoordinates[j][1])**2)**.5, 2)
+            if dist < minRad and i not in obstacles and j not in obstacles:
+                graph.append([i, j, dist])
+    return graph, pointsAndCoordinates, obstaclesList, N
     #endregion
-    return pointsAndCoordinates, obstaclesList, N
 
-pointsAndCoordinates, obstaclesList, N = graphCreation(pts, 100, 100, 500, 900)
+graph, pointsAndCoordinates, obstaclesList, N = graphCreation(pts, 200, 200, 400, 850)
 
-### Here goes the Djikstra algo for path planning ###
-#region Djikstra
-def shortestPathFastDjikstra(N):
-    f = open('points16.txt')
-    lines = f.read().splitlines()
+def adjacencyListCreation(graph, N):
+    # example of adjacency list (or rather map)
+    # adjacency_list = 
+    # {'1': [('2', 1.2), ('3', 3.4), ('4', 7.9)],
+    # '2': [('4', 5.5)],
+    # '3': [('4', 12.6)]}
+    print('\nNumber of edges:', len(graph))
+    print('Number of vertexes:', N)
 
-    print('\nNumber of edges:', len(lines))
-    print('Number of vertexes: ', N)
+    adjacency_list = {i+1: [] for i in range(len(graph))}
 
-    prev = [-1]*(N+1)
-    m = [[] for _ in range(N + 1)]    # For the adjacency list, create an empty list
-    for i in range(len(lines)):       # Each array of adjacency list is filled according to the list of edges
-        a, b, ll = map(float, lines[i].split())
+    for i in range(len(graph)):
+        a, b, ll = map(float, graph[i])
         a, b = int(a), int(b)
-        m[a].append([b, ll])
-        m[b].append([a, ll])
+        adjacency_list[a].append((b, ll))
+        adjacency_list[b].append((a, ll))
 
+    return adjacency_list
+
+adjacency_list = adjacencyListCreation(graph, N) # pts and x,y of start and final points
+
+#region Djikstra
+def shortestPathFastDjikstra(adjacency_list, N):
+
+    m = adjacency_list.copy()
+    prev = [-1]*(N+1)
     s, f = N-1, N
     pathByVertexes = [f]
 
@@ -117,7 +119,7 @@ def shortestPathFastDjikstra(N):
     if dist[f][0] == float('inf'):
         print(-1)
     else:
-        print('\nDistance to cover:', round(dist[f][0], 3))
+        print('\nDistance to cover by Djikstra:', round(dist[f][0], 3))
 
     if dist[f][0] == float('inf'):
         print('There is no path to the final vertex!')
@@ -129,44 +131,14 @@ def shortestPathFastDjikstra(N):
                 path(prev, pathByVertexes, f)
             return pathByVertexes[::-1]
         pathList = path(prev, pathByVertexes, f)
-        print('Path found. Vertexes to pass through:')
+        print('Vertexes to pass through:')
         print(*pathList)
     return pathList
-
-pathListDjikstra = shortestPathFastDjikstra(N)
 #endregion
 
 #region A*
-def adjacencyListCreation(N):
-
-    f = open('points16.txt')
-    lines = f.read().splitlines()
-    print('\nNumber of edges:', len(lines))
-    print('Number of vertexes: ', N)
-
-    adjacency_list = {i+1: [] for i in range(len(lines))}
-
-    for i in range(len(lines)):
-        a, b, ll = map(float, lines[i].split())
-        a, b = int(a), int(b)
-        adjacency_list[a].append((b, ll))
-        adjacency_list[b].append((a, ll))
-
-    return adjacency_list
-
-adjacency_list = adjacencyListCreation(N) # pts and x,y of start and final points
-
-### Here goes A* algo for path planning ###
-### Thanks to https://github.com/VikashPR/18CSC305J-AI/blob/main/A_Star-BFS.py for code parts
-
+# Thanks to https://github.com/VikashPR/18CSC305J-AI/blob/main/A_Star-BFS.py for code parts
 class Graph:
-    # example of adjacency list (or rather map)
-    # adjacency_list = {
-    # 'A': [('B', 1), ('C', 3), ('D', 7)],
-    # 'B': [('D', 5)],
-    # 'C': [('D', 12)]
-    # }
-
     def __init__(self, adjacency_list):
         self.adjacency_list = adjacency_list
         
@@ -224,8 +196,8 @@ class Graph:
                 reconst_path.append(start_node)
 
                 reconst_path.reverse()
-                print('\nDistance to cover:', round(dist[N], 3))
-                print('Path found. Vertexes to pass through:')
+                print('\nDistance to cover by A*:', round(dist[N], 3))
+                print('Vertexes to pass through:')
                 print(*reconst_path)
                 return reconst_path
 
@@ -257,10 +229,10 @@ class Graph:
             closed_list.add(n)
         print('Path does not exist!')
         return None
-
-graph1 = Graph(adjacency_list)
-pathListAstar = graph1.a_star_algorithm(N-1, N, pointsAndCoordinates) # N-1 and N are numbers of start and final points
 #endregion
+
+pathListDjikstra = shortestPathFastDjikstra(adjacency_list, N)
+pathListAstar = Graph(adjacency_list).a_star_algorithm(N-1, N, pointsAndCoordinates) # N-1 and N are numbers of start and final points
 
 def imageSaveDjikstra(kp_image, pathList, pointsAndCoordinates, obstaclesList):
     for obstacle in obstaclesList:
@@ -273,9 +245,9 @@ def imageSaveDjikstra(kp_image, pathList, pointsAndCoordinates, obstaclesList):
 
     for i in range(len(pointCoords) - 1):
         newimg = cv2.line(kp_image, tuple(pointCoords[i]), tuple(pointCoords[i+1]), (0,0,255), 2)
-    cv2.imwrite('Images/Djikstra3Akaze2.jpg', newimg)
+    cv2.imwrite('Images/NEWDjikstraAKAZE.jpg', newimg)
 
-    print("\nExecution of Djikstra's algorithm:", str(round((time.time()-startTime), 2))+'s')
+    print("\nExecution of Djikstra's algorithm:", str(round((time.time() - startTime), 2))+'s')
 
 def imageSaveAstar(kp_image, pathList, pointsAndCoordinates, obstaclesList):
     for obstacle in obstaclesList:
@@ -288,8 +260,8 @@ def imageSaveAstar(kp_image, pathList, pointsAndCoordinates, obstaclesList):
 
     for i in range(len(pointCoords) - 1):
         newimg = cv2.line(kp_image, tuple(pointCoords[i]), tuple(pointCoords[i+1]), (0,0,255), 2)
-    cv2.imwrite('Images/Astar3Akaze2.jpg', newimg)
-    print("\nExecution of A* algorithm:", str(round((time.time()-startTime), 2))+'s')
+    cv2.imwrite('Images/NEWAstarAKAZE.jpg', newimg)
+    print("Execution of A* algorithm:", str(round((time.time() - startTime), 2))+'s\n')
 
 imageSaveDjikstra(kp_image, pathListDjikstra, pointsAndCoordinates, obstaclesList)
 imageSaveAstar(kp_image, pathListAstar,  pointsAndCoordinates, obstaclesList)
