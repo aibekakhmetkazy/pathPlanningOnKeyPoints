@@ -1,7 +1,6 @@
 import cv2
 import heapq
 import numpy as np
-import matplotlib.pyplot as plt
 import time
 
 startTime = time.time()
@@ -35,8 +34,8 @@ def graphCreation(pts, startx, starty, finalx, finaly):
     pointsAndCoordinates = [[]]
     n = len(pts[:, 0])
 
-    for i in range(1, n+1):
-        pointsAndCoordinates.append([pts[i-1, 0], pts[i-1, 1]])
+    for i in range(n):
+        pointsAndCoordinates.append([pts[i, 0], pts[i, 1]])
 
     pointsAndCoordinates.append([startx, starty])   # Start vertex is n
     pointsAndCoordinates.append([finalx, finaly])   # Final vertex is n+1
@@ -62,8 +61,8 @@ def graphCreation(pts, startx, starty, finalx, finaly):
     graph = []
     for i in range(1, N):
         for j in range(i+1, N+1):
-            dist = round(((pointsAndCoordinates[i][0] - pointsAndCoordinates[j][0])**2 +
-                    (pointsAndCoordinates[i][1] - pointsAndCoordinates[j][1])**2)**.5, 2)
+            dist = ((pointsAndCoordinates[i][0] - pointsAndCoordinates[j][0])**2 +
+                    (pointsAndCoordinates[i][1] - pointsAndCoordinates[j][1])**2)**.5
             if dist < minRad and i not in obstacles and j not in obstacles:
                 graph.append([i, j, dist])
     return graph, pointsAndCoordinates, obstaclesList, N
