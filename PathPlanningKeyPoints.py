@@ -7,24 +7,24 @@ startTime = time.time()
 img = cv2.imread('high_resolution_image16.jpg')
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
+akaze = cv2.AKAZE_create()
+kp_akaze, descriptors = akaze.detectAndCompute(gray, None)
+kp_image = cv2.drawKeypoints(img, kp_akaze, None, color=(0, 255, 0), flags=0)
+# cv2.imshow('Akaze', kp_image)
+# cv2.waitKey(0)
+# cv2.imwrite('akaze.jpg', kp_image)
+
 # Initiate SIFT object with default values
-sift = cv2.SIFT_create(nfeatures=4103)
+sift = cv2.SIFT_create(nfeatures=len(kp_akaze))
 # keypoints = sift.detect(gray, None)
 # kp_image = cv2.drawKeypoints(img, keypoints, None, color=(0, 255, 0), flags=0)
 # cv2.imwrite('sift.jpg', img1)
 
 # # Applying the ORB function 
-orb = cv2.ORB_create(nfeatures=4103) 
+orb = cv2.ORB_create(nfeatures=len(kp_akaze))
 # keypoints, des = orb.detectAndCompute(gray, None) 
 # kp_image = cv2.drawKeypoints(img, keypoints, None, color=(0, 255, 0), flags=0) 
 # cv2.imwrite('orb.jpg', kp_image)
-
-akaze = cv2.AKAZE_create()
-keypoints, descriptors = akaze.detectAndCompute(gray, None)
-kp_image = cv2.drawKeypoints(img, keypoints, None, color=(0, 255, 0), flags=0)
-# cv2.imshow('Akaze', kp_image)
-# cv2.waitKey(0)
-# cv2.imwrite('akaze.jpg', kp_image)
 
 pts = cv2.KeyPoint_convert(keypoints)
 x, y = pts[:, 0], pts[:, 1]
@@ -51,7 +51,7 @@ def graphCreation(pts, startx, starty, finalx, finaly):
         if obstacle[2] < minRad:
             minRad = obstacle[2]
         for i in range(1, N+1):
-            rad = np.sqrt(5) / 2 * obstacle[2]
+            rad = 5**.5 / 2 * obstacle[2]
             d = round(((obstacle[0] - pointsAndCoordinates[i][0]) ** 2 +
                        (obstacle[1] - pointsAndCoordinates[i][1]) ** 2) ** .5, 2)
             if d <= rad:
@@ -76,7 +76,7 @@ def adjacencyListCreation(graph, N):
     # {'1': [('2', 1.2), ('3', 3.4), ('4', 7.9)],
     # '2': [('4', 5.5)],
     # '3': [('4', 12.6)]}
-    print('\nNumber of edges:', len(graph))
+    print('Number of edges:', len(graph))
     print('Number of vertexes:', N)
 
     adjacency_list = {i+1: [] for i in range(len(graph))}
@@ -147,8 +147,8 @@ class Graph:
     # heuristic function with equal values for all nodes
     def h(self, n, pointsAndCoordinates):
 
-        goalDist = np.sqrt((pointsAndCoordinates[N][0]-pointsAndCoordinates[n][0])**2 + 
-                           (pointsAndCoordinates[N][1]-pointsAndCoordinates[n][1])**2)
+        goalDist = ((pointsAndCoordinates[N][0]-pointsAndCoordinates[n][0])**2 +
+                    (pointsAndCoordinates[N][1]-pointsAndCoordinates[n][1])**2)**.5
 
         return goalDist
 
@@ -233,7 +233,7 @@ class Graph:
 pathListDjikstra = shortestPathFastDjikstra(adjacency_list, N)
 pathListAstar = Graph(adjacency_list).a_star_algorithm(N-1, N, pointsAndCoordinates) # N-1 and N are numbers of start and final points
 
-def imageSaveDjikstra(kp_image, pathList, pointsAndCoordinates, obstaclesList):
+def imageSave(kp_image, pathList, pointsAndCoordinates, obstaclesList, algoName):
     for obstacle in obstaclesList:
         kp_image = cv2.circle(kp_image, (int(obstacle[0]),
                                      int(obstacle[1])), obstacle[2], (200, 20, 20), -1)
@@ -244,23 +244,9 @@ def imageSaveDjikstra(kp_image, pathList, pointsAndCoordinates, obstaclesList):
 
     for i in range(len(pointCoords) - 1):
         newimg = cv2.line(kp_image, tuple(pointCoords[i]), tuple(pointCoords[i+1]), (0,0,255), 2)
-    cv2.imwrite('Images/NEWDjikstraAKAZE.jpg', newimg)
+    cv2.imwrite('Images/'+algoName+'.jpg', newimg)
 
-    print("\nExecution of Djikstra's algorithm:", str(round((time.time() - startTime), 2))+'s')
+    print("Execution of "+algoName+" algorithm:", str(round((time.time() - startTime), 2))+'s')
 
-def imageSaveAstar(kp_image, pathList, pointsAndCoordinates, obstaclesList):
-    for obstacle in obstaclesList:
-        kp_image = cv2.circle(kp_image, (int(obstacle[0]),
-                                     int(obstacle[1])), obstacle[2], (200, 20, 20), -1)
-    pointCoords = []
-    for v in pathList:
-        pointCoords.append(pointsAndCoordinates[v])
-    pointCoords = np.array(pointCoords, dtype=int)
-
-    for i in range(len(pointCoords) - 1):
-        newimg = cv2.line(kp_image, tuple(pointCoords[i]), tuple(pointCoords[i+1]), (0,0,255), 2)
-    cv2.imwrite('Images/NEWAstarAKAZE.jpg', newimg)
-    print("Execution of A* algorithm:", str(round((time.time() - startTime), 2))+'s\n')
-
-imageSaveDjikstra(kp_image, pathListDjikstra, pointsAndCoordinates, obstaclesList)
-imageSaveAstar(kp_image, pathListAstar,  pointsAndCoordinates, obstaclesList)
+imageSave(kp_image, pathListDjikstra, pointsAndCoordinates, obstaclesList, 'Djikstra')
+imageSave(kp_image, pathListAstar,  pointsAndCoordinates, obstaclesList, 'A*')
