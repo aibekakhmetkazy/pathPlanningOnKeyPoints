@@ -1,7 +1,9 @@
 import cv2
-import heapq
 import numpy as np
 import time
+import Astar
+import Djikstra
+# import Dstar_lite
 
 startTime = time.time()
 img = cv2.imread('high_resolution_image16.jpg')
@@ -9,25 +11,23 @@ gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 akaze = cv2.AKAZE_create()
 kp_akaze, descriptors = akaze.detectAndCompute(gray, None)
-kp_image = cv2.drawKeypoints(img, kp_akaze, None, color=(0, 255, 0), flags=0)
-# cv2.imshow('Akaze', kp_image)
-# cv2.waitKey(0)
-# cv2.imwrite('akaze.jpg', kp_image)
+kp_image_akaze = cv2.drawKeypoints(img, kp_akaze, None, color=(0, 255, 0), flags=0)
 
-# Initiate SIFT object with default values
 sift = cv2.SIFT_create(nfeatures=len(kp_akaze))
-# keypoints = sift.detect(gray, None)
-# kp_image = cv2.drawKeypoints(img, keypoints, None, color=(0, 255, 0), flags=0)
-# cv2.imwrite('sift.jpg', img1)
+kp_sift = sift.detect(gray, None)
+kp_image_sift = cv2.drawKeypoints(img, kp_sift, None, color=(0, 255, 0), flags=0)
 
-# # Applying the ORB function 
 orb = cv2.ORB_create(nfeatures=len(kp_akaze))
-# keypoints, des = orb.detectAndCompute(gray, None) 
-# kp_image = cv2.drawKeypoints(img, keypoints, None, color=(0, 255, 0), flags=0) 
-# cv2.imwrite('orb.jpg', kp_image)
+kp_orb, des = orb.detectAndCompute(gray, None)
+kp_image_orb = cv2.drawKeypoints(img, kp_orb, None, color=(0, 255, 0), flags=0)
 
-pts = cv2.KeyPoint_convert(keypoints)
-x, y = pts[:, 0], pts[:, 1]
+def imageShow(image):
+    cv2.imshow('Image', image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+def pointCoordinates(keypoints):
+    return cv2.KeyPoint_convert(kp_akaze)
 
 ### Here goes the creation of the graph edges ###
 def graphCreation(pts, startx, starty, finalx, finaly):
@@ -68,16 +68,14 @@ def graphCreation(pts, startx, starty, finalx, finaly):
     return graph, pointsAndCoordinates, obstaclesList, N
     #endregion
 
-graph, pointsAndCoordinates, obstaclesList, N = graphCreation(pts, 200, 200, 400, 850)
-
 def adjacencyListCreation(graph, N):
     # example of adjacency list (or rather map)
     # adjacency_list = 
     # {'1': [('2', 1.2), ('3', 3.4), ('4', 7.9)],
     # '2': [('4', 5.5)],
     # '3': [('4', 12.6)]}
-    print('Number of edges:', len(graph))
-    print('Number of vertexes:', N)
+    print('Number of keypoints:', N)
+    print('Number of edges:', len(graph), '\n')
 
     adjacency_list = {i+1: [] for i in range(len(graph))}
 
@@ -89,164 +87,40 @@ def adjacencyListCreation(graph, N):
 
     return adjacency_list
 
-adjacency_list = adjacencyListCreation(graph, N) # pts and x,y of start and final points
+def imageSave(image, pathList, points, obstaclesList, algoName, cvAlgo, zoom):
 
-#region Djikstra
-def shortestPathFastDjikstra(adjacency_list, N):
-
-    m = adjacency_list.copy()
-    prev = [-1]*(N+1)
-    s, f = N-1, N
-    pathByVertexes = [f]
-
-    visited = [False] * (N + 1)
-    dist = [[float('inf'), i] for i in range(N + 1)]
-    dist[s][0] = 0
-    heap = [[0, s]]
-
-    while len(heap) > 0 and not visited[f]:
-        visited[s] = True
-        s = heap[0][1]
-        for j in range(len(m[s])):
-            if dist[m[s][j][0]][0] > dist[s][0] + m[s][j][1]:
-                dist[m[s][j][0]][0] = dist[s][0] + m[s][j][1]
-                prev[m[s][j][0]] = s
-                if not visited[m[s][j][0]]:
-                    heapq.heappush(heap, dist[m[s][j][0]])
-        s = heapq.heappop(heap)[1]
-
-    if dist[f][0] == float('inf'):
-        print(-1)
-    else:
-        print('\nDistance to cover by Djikstra:', round(dist[f][0], 3))
-
-    if dist[f][0] == float('inf'):
-        print('There is no path to the final vertex!')
-    else:
-        def path(prev, pathByVertexes, f):
-            if prev[f] > -1:
-                pathByVertexes.append(prev[f])
-                f = prev[f]
-                path(prev, pathByVertexes, f)
-            return pathByVertexes[::-1]
-        pathList = path(prev, pathByVertexes, f)
-        print('Vertexes to pass through:')
-        print(*pathList)
-    return pathList
-#endregion
-
-#region A*
-# Thanks to https://github.com/VikashPR/18CSC305J-AI/blob/main/A_Star-BFS.py for code parts
-class Graph:
-    def __init__(self, adjacency_list):
-        self.adjacency_list = adjacency_list
-        
-    def get_neighbors(self, v):
-        return self.adjacency_list[v]
-
-    # heuristic function with equal values for all nodes
-    def h(self, n, pointsAndCoordinates):
-
-        goalDist = ((pointsAndCoordinates[N][0]-pointsAndCoordinates[n][0])**2 +
-                    (pointsAndCoordinates[N][1]-pointsAndCoordinates[n][1])**2)**.5
-
-        return goalDist
-
-    def a_star_algorithm(self, start_node, stop_node, pointsAndCoordinates):
-        # open_list is a list of nodes which have been visited, but who's neighbors
-        # haven't all been inspected, starts off with the start node
-        # closed_list is a list of nodes which have been visited
-        # and who's neighbors have been inspected
-        open_list = set([start_node])
-        closed_list = set([])
-
-        # g contains current distances from start_node to all other nodes
-        # the default value (if it's not found in the map) is +infinity
-        g = {}
-
-        g[start_node] = 0
-
-        # parents contains an adjacency map of all nodes
-        parents = {}
-        parents[start_node] = start_node
-        dist = {}
-
-        while len(open_list) > 0:
-            n = None
-
-            # find a node with the lowest value of f() - evaluation function
-            for v in open_list:
-                if n == None or g[v] + self.h(v, pointsAndCoordinates) < g[n] + self.h(n, pointsAndCoordinates):
-                    n = v
-
-            if n == None:
-                print('Path does not exist!')
-                return None
-
-            # if the current node is the stop_node
-            # then we begin reconstructin the path from it to the start_node
-            if n == stop_node:
-                reconst_path = []
-
-                while parents[n] != n:
-                    reconst_path.append(n)
-                    n = parents[n]
-
-                reconst_path.append(start_node)
-
-                reconst_path.reverse()
-                print('\nDistance to cover by A*:', round(dist[N], 3))
-                print('Vertexes to pass through:')
-                print(*reconst_path)
-                return reconst_path
-
-            # for all neighbors of the current node do
-            for (m, weight) in self.get_neighbors(n):
-                # if the current node isn't in both open_list and closed_list
-                # add it to open_list and note n as it's parent
-                if m not in open_list and m not in closed_list:
-                    open_list.add(m)
-                    parents[m] = n
-                    g[m] = g[n] + weight
-                    dist[m] = g[m]
-                # otherwise, check if it's quicker to first visit n, then m
-                # and if it is, update parent data and g data
-                # and if the node was in the closed_list, move it to open_list
-                else:
-                    if g[m] > g[n] + weight:
-                        g[m] = g[n] + weight
-                        dist[m] = g[m]
-
-                        parents[m] = n
-                        if m in closed_list:
-                            closed_list.remove(m)
-                            open_list.add(m)
-
-            # remove n from the open_list, and add it to closed_list
-            # because all of his neighbors were inspected
-            open_list.remove(n)
-            closed_list.add(n)
-        print('Path does not exist!')
-        return None
-#endregion
-
-pathListDjikstra = shortestPathFastDjikstra(adjacency_list, N)
-pathListAstar = Graph(adjacency_list).a_star_algorithm(N-1, N, pointsAndCoordinates) # N-1 and N are numbers of start and final points
-
-def imageSave(kp_image, pathList, pointsAndCoordinates, obstaclesList, algoName):
-    for obstacle in obstaclesList:
-        kp_image = cv2.circle(kp_image, (int(obstacle[0]),
-                                     int(obstacle[1])), obstacle[2], (200, 20, 20), -1)
-    pointCoords = []
+    f = open('pathList.txt', 'w')
+    pathCoords = []
     for v in pathList:
-        pointCoords.append(pointsAndCoordinates[v])
-    pointCoords = np.array(pointCoords, dtype=int)
+        pathCoords.append(points[v])
+    f.write(str(np.array(pathCoords, dtype=float)) + '\n')
+    pathCoords = np.array(pathCoords, dtype=int)
 
-    for i in range(len(pointCoords) - 1):
-        newimg = cv2.line(kp_image, tuple(pointCoords[i]), tuple(pointCoords[i+1]), (0,0,255), 2)
-    cv2.imwrite('Images/'+algoName+'.jpg', newimg)
+    for i in range(len(pathCoords) - 1):
+        image = cv2.line(image, tuple(pathCoords[i]), tuple(pathCoords[i+1]), (255, 200, 50), 3)
 
+    image = cv2.drawMarker(image, (points[N][0], points[N][1]),
+                           (0, 0, 255), 1, thickness=4)
+    image = cv2.circle(image, (points[N - 1][0], points[N - 1][1]),
+                       6, (200, 50, 200), thickness=4)
+
+    obs = image.copy()
+
+    for obstacle in obstaclesList:
+        obs = cv2.circle(obs, (int(obstacle[0]),
+                                     int(obstacle[1])), obstacle[2], (20, 20, 250), -1)
+        newimg = cv2.addWeighted(obs, 0.7, image, 0.3, 0)
+
+    cv2.imwrite('Images/'+algoName+cvAlgo+zoom+'.jpg', newimg)
     print("Execution of "+algoName+" algorithm:", str(round((time.time() - startTime), 2))+'s')
 
-imageSave(kp_image, pathListDjikstra, pointsAndCoordinates, obstaclesList, 'Djikstra')
-imageSave(kp_image, pathListAstar,  pointsAndCoordinates, obstaclesList, 'A*')
+pts = pointCoordinates(kp_image_akaze)
+graph, pointsAndCoordinates, obstaclesList, N = graphCreation(pts, 200, 200, 400, 850)
+
+adjacency_list = adjacencyListCreation(graph, N) # pts and x,y of start and final points
+
+pathListDjikstra = Djikstra.shortestPathFastDjikstra(adjacency_list, N)
+pathListAstar = Astar.Graph(adjacency_list).a_star_algorithm(N-1, N, pointsAndCoordinates, N) # N-1 and N are numbers of start and final points
+
+imageSave(kp_image_akaze, pathListDjikstra, pointsAndCoordinates, obstaclesList, 'Djikstra', cvAlgo='Akaze', zoom='16')
+imageSave(kp_image_orb, pathListAstar,  pointsAndCoordinates, obstaclesList, 'Astar', cvAlgo='Orb', zoom='16')
