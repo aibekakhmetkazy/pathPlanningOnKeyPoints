@@ -15,7 +15,7 @@ class Graph:
 
         return goalDist
 
-    def a_star_algorithm(self, start_node, stop_node, points, N):
+    def a_star_algorithm(self, start_node, stop_node, points):
         # open_list is a list of nodes which have been visited, but who's neighbors
         # haven't all been inspected, starts off with the start node
         # closed_list is a list of nodes which have been visited
@@ -39,12 +39,12 @@ class Graph:
 
             # find a node with the lowest value of f() - evaluation function
             for v in open_list:
-                if n == None or g[v] + self.h(v, N, points) < g[n] + self.h(n, N, points):
+                if n == None or g[v] + self.h(v, stop_node, points) < g[n] + self.h(n, stop_node, points):
                     n = v
 
             if n == None:
                 print('Path does not exist!')
-                return None
+                return []
 
             # if the current node is the stop_node
             # then we begin reconstructin the path from it to the start_node
@@ -58,7 +58,7 @@ class Graph:
                 reconst_path.append(start_node)
 
                 reconst_path.reverse()
-                print('\nDistance to cover by A*:', round(dist[N], 3))
+                print('\nDistance to cover by A*:', round(dist[stop_node], 3))
                 print('Vertexes to pass through:')
                 print(*reconst_path, end='\n\n')
                 return reconst_path
@@ -89,6 +89,6 @@ class Graph:
             # because all of his neighbors were inspected
             open_list.remove(n)
             closed_list.add(n)
-        print('Path does not exist!')
-        return None
+        print('Path does not exist!\n')
+        return []
 # endregion
