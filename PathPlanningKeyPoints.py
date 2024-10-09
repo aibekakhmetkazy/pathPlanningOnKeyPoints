@@ -11,18 +11,15 @@ gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 akaze = cv2.AKAZE_create()
 kp_akaze, des_akaze = akaze.detectAndCompute(gray, None)
-kp_image_akaze = cv2.drawKeypoints(img, kp_akaze, None, color=(0, 200, 0), flags=0)
 
 sift = cv2.SIFT_create(nfeatures=len(kp_akaze)) # The same number of features as in Akaze
 kp_sift = sift.detect(gray, None)
-kp_image_sift = cv2.drawKeypoints(img, kp_sift, None, color=(0, 200, 0), flags=0)
 
 orb = cv2.ORB_create(nfeatures=len(kp_akaze))   # The same number of features as in Akaze
 kp_orb, des_orb = orb.detectAndCompute(gray, None)
-print(len(kp_orb))
-kp_image_orb = cv2.drawKeypoints(img, kp_orb, None, color=(0, 200, 0), flags=0)
 
-def imageShow(image):
+def imageShow(keypoints):
+    image = cv2.drawKeypoints(img, keypoints, None, color=(0, 200, 0), flags=0)
     cv2.imshow('Image', image)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
@@ -85,7 +82,9 @@ def adjacencyListCreation(graph, N):
 
     return adjacency_list
 
-def imageSave(image, pathList, points, obstaclesList, algoName, cvAlgo, zoom):
+def imageSave(keypoints, pathList, points, obstaclesList, algoName, cvAlgo, zoom):
+
+    image = cv2.drawKeypoints(img, keypoints, None, color=(0, 200, 0), flags=0)
 
     f = open('pathList.txt', 'w')
     pathCoords = []
@@ -119,7 +118,7 @@ goaly = 840
 
 obstaclesList = [[300, 600, 60], [450, 700, 60], [300, 750, 60]]  # List of given circle obstacles with x,y,r values
 
-pts = pointCoordinates(kp_orb)
+pts = pointCoordinates(kp_sift) # Needs to be changed for different keypoints
 graph, coordinates, N = graphCreation(pts, startx, starty, goalx, goaly, obstaclesList)
 
 adjacency_list = adjacencyListCreation(graph, N) # pts and x,y of start and final points
@@ -127,5 +126,6 @@ adjacency_list = adjacencyListCreation(graph, N) # pts and x,y of start and fina
 pathListDjikstra = Djikstra.shortestPathFastDjikstra(adjacency_list, N)
 pathListAstar = Astar.Graph(adjacency_list).a_star_algorithm(N-1, N, coordinates) # N-1 and N are numbers of start and final points
 
-imageSave(kp_image_orb, pathListDjikstra, coordinates, obstaclesList, 'Djikstra', cvAlgo='Orb', zoom='16')
-imageSave(kp_image_orb, pathListAstar,  coordinates, obstaclesList, 'Astar', cvAlgo='Orb', zoom='16')
+# Needs to be changed for different keypoints
+imageSave(kp_sift, pathListDjikstra, coordinates, obstaclesList, 'Djikstra', cvAlgo='Sift', zoom='16') 
+imageSave(kp_sift, pathListAstar,  coordinates, obstaclesList, 'Astar', cvAlgo='Sift', zoom='16')
