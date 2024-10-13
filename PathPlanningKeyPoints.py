@@ -137,9 +137,6 @@ for line in lines[:1]:
         elif key[0] == 'y':
             y = float(obstaclesCoord[key])
             obstaclesList.append([sizex * x * 0.01, sizey * y * 0.01, 25])
-    obstaclesCoord = {}
-
-# obstaclesList = [[512*0.111, 512*0.812, 30], [70, 90, 15], [90, 25, 15]]  # List of given circle obstacles with x,y,r values
 
 kp_model = kp_akaze
 cvAlgo = 'AKAZE'
