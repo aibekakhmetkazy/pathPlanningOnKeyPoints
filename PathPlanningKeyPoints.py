@@ -4,9 +4,10 @@ import time
 import Astar
 import Djikstra
 # import Dstar_lite
+from bs4 import BeautifulSoup
 
 startTime = time.time()
-img = cv2.imread('high_resolution_image16.jpg')
+img = cv2.imread('1_identified.jpg')
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 akaze = cv2.AKAZE_create()
@@ -18,7 +19,7 @@ kp_sift = sift.detect(gray, None)
 orb = cv2.ORB_create(nfeatures=len(kp_akaze))   # The same number of features as in Akaze
 kp_orb, des_orb = orb.detectAndCompute(gray, None)
 
-def imageShow(keypoints):
+def imageShow(img, keypoints):
     image = cv2.drawKeypoints(img, keypoints, None, color=(0, 200, 0), flags=0)
     cv2.imshow('Image', image)
     cv2.waitKey(0)
@@ -82,24 +83,24 @@ def adjacencyListCreation(graph, N):
 
     return adjacency_list
 
-def imageSave(keypoints, pathList, points, obstaclesList, algoName, cvAlgo, zoom):
-
-    image = cv2.drawKeypoints(img, keypoints, None, color=(0, 200, 0), flags=0)
+def imageSave(img, keypoints, pathList, points, obstaclesList, algoName, cvAlgo):
+    image = img.copy()
+    image = cv2.drawKeypoints(image, keypoints, None, color=(0, 200, 0), flags=0)
 
     f = open('pathList.txt', 'w')
     pathCoords = []
     for v in pathList:
         pathCoords.append(points[v])
-    f.write(str(np.array(pathCoords, dtype=float)) + '\n')
+        f.write(f'{points[v][0]:.3f} {points[v][1]:.3f}\n')
     pathCoords = np.array(pathCoords, dtype=int)
 
     for i in range(len(pathCoords) - 1):
         image = cv2.line(image, tuple(pathCoords[i]), tuple(pathCoords[i+1]), (50, 0, 255), 2, lineType = cv2.LINE_AA)
 
     image = cv2.drawMarker(image, (points[N][0], points[N][1]),
-                           (220, 220, 220), 1, markerSize = 12, thickness=3)
+                           (255, 0, 0), 1, markerSize = 12, thickness=3)
     image = cv2.circle(image, (points[N - 1][0], points[N - 1][1]),
-                       6, (200, 200, 200), thickness=3)
+                       6, (255, 0, 0), thickness=3)
 
     obs = image.copy()
 
@@ -108,24 +109,49 @@ def imageSave(keypoints, pathList, points, obstaclesList, algoName, cvAlgo, zoom
                                      int(obstacle[1])), obstacle[2], (250, 50, 200), -1)
         newimg = cv2.addWeighted(obs, 0.7, image, 0.3, 0)
 
-    cv2.imwrite('Images/'+algoName+cvAlgo+zoom+'.png', newimg)
+    cv2.imwrite('Images/'+algoName+cvAlgo+'.png', newimg)
     print("Execution of "+algoName+" algorithm:", str(round((time.time() - startTime), 2))+'s')
 
-startx = 200
-starty = 200
-goalx = 370
-goaly = 840
+startx = 30
+starty = 480
+goalx = 256
+goaly = 256
 
-obstaclesList = [[300, 600, 60], [450, 700, 60], [300, 750, 60]]  # List of given circle obstacles with x,y,r values
+sizex, sizey, _ = img.shape
 
-pts = pointCoordinates(kp_sift) # Needs to be changed for different keypoints
+obstaclesList = []
+obsctacles = open('Answers.txt', 'r')
+lines = obsctacles.readlines()
+
+for line in lines[:1]:
+    obstaclesCoord = {}
+    for i in range(len(line)):
+        if line[i] == '<':
+            html = BeautifulSoup(line[i:], features='html.parser')
+            html.points.attrs.pop('alt')
+            obstaclesCoord = html.points.attrs
+            break
+    for key in obstaclesCoord.keys():
+        if key[0] == 'x':
+            x = float(obstaclesCoord[key])
+        elif key[0] == 'y':
+            y = float(obstaclesCoord[key])
+            obstaclesList.append([sizex * x * 0.01, sizey * y * 0.01, 25])
+    obstaclesCoord = {}
+
+# obstaclesList = [[512*0.111, 512*0.812, 30], [70, 90, 15], [90, 25, 15]]  # List of given circle obstacles with x,y,r values
+
+kp_model = kp_akaze
+cvAlgo = 'AKAZE'
+
+print(f'\n--- Feature detection Model: {cvAlgo} ---')
+pts = pointCoordinates(kp_model) # Needs to be changed for different keypoints
 graph, coordinates, N = graphCreation(pts, startx, starty, goalx, goaly, obstaclesList)
-
 adjacency_list = adjacencyListCreation(graph, N) # pts and x,y of start and final points
 
 pathListDjikstra = Djikstra.shortestPathFastDjikstra(adjacency_list, N)
 pathListAstar = Astar.Graph(adjacency_list).a_star_algorithm(N-1, N, coordinates) # N-1 and N are numbers of start and final points
 
 # Needs to be changed for different keypoints
-imageSave(kp_sift, pathListDjikstra, coordinates, obstaclesList, 'Djikstra', cvAlgo='Sift', zoom='16') 
-imageSave(kp_sift, pathListAstar,  coordinates, obstaclesList, 'Astar', cvAlgo='Sift', zoom='16')
+imageSave(img, kp_model, pathListDjikstra, coordinates, obstaclesList, '1Djikstra', cvAlgo)
+imageSave(img, kp_model, pathListAstar,  coordinates, obstaclesList, '1Astar', cvAlgo)
