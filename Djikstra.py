@@ -28,7 +28,6 @@ def shortestPathFastDjikstra(adjacency_list, N):
         print(-1)
         print('There is no path to the final vertex!')
     else:
-        print('Distance to cover by Djikstra:', round(dist[f][0], 3))
         def path(prev, pathByVertexes, f):
             if prev[f] > -1:
                 pathByVertexes.append(prev[f])
@@ -36,7 +35,8 @@ def shortestPathFastDjikstra(adjacency_list, N):
                 path(prev, pathByVertexes, f)
             return pathByVertexes[::-1]
         pathList = path(prev, pathByVertexes, f)
-        print('Vertexes to pass through:')
-        print(*pathList, end='\n')
+        print("Djikstra's found a path:\n", pathList, end='\n')
+        print('Total distance:', round(dist[f][0], 3))
+        print('------------------------------------------------')
     return pathList
 #endregion

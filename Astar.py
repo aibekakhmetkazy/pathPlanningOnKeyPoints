@@ -58,9 +58,9 @@ class Graph:
                 reconst_path.append(start_node)
 
                 reconst_path.reverse()
-                print('\nDistance to cover by A*:', round(dist[stop_node], 3))
-                print('Vertexes to pass through:')
-                print(*reconst_path, end='\n\n')
+                print('A* found a path:\n', reconst_path, end='\n')
+                print('Total distance:', round(dist[stop_node], 3))
+                print('------------------------------------------------')
                 return reconst_path
 
             # for all neighbors of the current node do

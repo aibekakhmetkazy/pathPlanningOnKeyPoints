@@ -3,8 +3,10 @@ import numpy as np
 import time
 import Astar
 import Djikstra
-# import Dstar_lite
+import RRT
+import Bi_Astar
 from bs4 import BeautifulSoup
+from PIL import Image
 
 startTime = time.time()
 img = cv2.imread('1_identified.jpg')
@@ -31,19 +33,36 @@ def pointCoordinates(keypoints):
 ### Here goes the creation of the graph edges ###
 def graphCreation(pts, startx, starty, finalx, finaly, obstaclesList):
     coordinates = [[]]
-    n = len(pts[:, 0])
 
-    for i in range(n):
+    for i in range(len(pts[:, 0])):
         coordinates.append([pts[i, 0], pts[i, 1]])
 
     coordinates.append([startx, starty])   # Start vertex is n
     coordinates.append([finalx, finaly])   # Final vertex is n+1
 
-    N = n+2     # Number of vertexes increased after addition of start and final vertexes
+    N = len(coordinates)    # Number of vertexes increased after addition of start and final vertexes
 
     obstacles = []
 
-    minRad = min(np.array(obstaclesList)[:, 2])
+    minRad = min(np.array(obstaclesList)[:, 2], 0)
+    minEdges = []
+    for i in range(1, N):
+        edgeLen = []
+        for j in range(i+1, N+1):
+            edgeLen.append(((coordinates[i][0] - coordinates[j][0])**2 +
+                            (coordinates[i][1] - coordinates[j][1])**2)**.5)
+        minEdges.append(min(edgeLen))
+
+    maxMinDist = max(minEdges)
+    medianMinDist = np.median(minEdges)
+    meanMinDist = np.mean(minEdges)
+
+    print('MedianMin:', medianMinDist)
+    print('MeanMin:', meanMinDist)
+    print('Maxmin:', maxMinDist)
+    print('MinRad:', minRad)
+
+    edge = max(minRad, meanMinDist)
 
     for obstacle in obstaclesList:
         for i in range(1, N+1):
@@ -59,7 +78,7 @@ def graphCreation(pts, startx, starty, finalx, finaly, obstaclesList):
         for j in range(i+1, N+1):
             dist = ((coordinates[i][0] - coordinates[j][0])**2 +
                     (coordinates[i][1] - coordinates[j][1])**2)**.5
-            if dist < minRad and i not in obstacles and j not in obstacles:
+            if dist < edge and i not in obstacles and j not in obstacles:
                 graph.append([i, j, dist])
     return graph, coordinates, N
     #endregion
@@ -70,7 +89,7 @@ def adjacencyListCreation(graph, N):
     # {'1': [('2', 1.2), ('3', 3.4), ('4', 7.9)],
     # '2': [('4', 5.5)],
     # '3': [('4', 12.6)]}
-    print('Number of keypoints:', N)
+    print('Number of vertexes:', N)
     print('Number of edges:', len(graph), '\n')
 
     adjacency_list = {i+1: [] for i in range(len(graph))}
@@ -85,7 +104,7 @@ def adjacencyListCreation(graph, N):
 
 def imageSave(img, keypoints, pathList, points, obstaclesList, algoName, cvAlgo):
     image = img.copy()
-    image = cv2.drawKeypoints(image, keypoints, None, color=(0, 200, 0), flags=0)
+    # image = cv2.drawKeypoints(image, keypoints, None, color=(0, 200, 0), flags=0)
 
     f = open('pathList.txt', 'w')
     pathCoords = []
@@ -109,8 +128,45 @@ def imageSave(img, keypoints, pathList, points, obstaclesList, algoName, cvAlgo)
                                      int(obstacle[1])), obstacle[2], (250, 50, 200), -1)
         newimg = cv2.addWeighted(obs, 0.7, image, 0.3, 0)
 
-    cv2.imwrite('Images/'+algoName+cvAlgo+'.png', newimg)
-    print("Execution of "+algoName+" algorithm:", str(round((time.time() - startTime), 2))+'s')
+    cv2.imwrite('Images/'+algoName+'.png', newimg)
+    # print("Execution of "+algoName+" algorithm:", str(round((time.time() - startTime), 2))+'s')
+
+def graphCreation(pts, obstacles_list):
+    coordinates = [[]]
+    coordinates += pts.copy()
+
+    N = len(coordinates) - 1
+    obstacles = []
+    minRad = 25
+    for obstacle in obstacles_list:
+        for i in range(1, N + 1):
+            rad = 0.5 * 5 ** .5 * minRad
+            d = ((obstacle[0] - coordinates[i][0]) ** 2 +
+                 (obstacle[1] - coordinates[i][1]) ** 2) ** .5
+            if d <= rad:
+                obstacles.append(i)
+
+    # region GraphConstruction
+    graph = []
+    for i in range(1, N):
+        for j in range(i + 1, N + 1):
+            dist = ((coordinates[i][0] - coordinates[j][0]) ** 2 +
+                    (coordinates[i][1] - coordinates[j][1]) ** 2) ** .5
+            if dist < minRad and i not in obstacles and j not in obstacles:
+                graph.append([i, j, dist])
+    return graph, coordinates, N
+
+def image_discretization(image_path, discretization_step):
+
+    image = Image.open(image_path)
+    width, height = image.size
+
+    pts = []
+    for i in range(0, width, discretization_step):
+        for j in range(0, height, discretization_step):
+            pts.append([i, j])
+    return pts, width, height
+
 
 startx = 30
 starty = 480
@@ -141,14 +197,26 @@ for line in lines[:1]:
 kp_model = kp_akaze
 cvAlgo = 'AKAZE'
 
-print(f'\n--- Feature detection Model: {cvAlgo} ---')
-pts = pointCoordinates(kp_model) # Needs to be changed for different keypoints
-graph, coordinates, N = graphCreation(pts, startx, starty, goalx, goaly, obstaclesList)
-adjacency_list = adjacencyListCreation(graph, N) # pts and x,y of start and final points
+# print(f'\n--- Feature detection Model: {cvAlgo} ---')
+print("\nFINDING THE PATH...")
 
-pathListDjikstra = Djikstra.shortestPathFastDjikstra(adjacency_list, N)
+pts, width, height = image_discretization('1_identified.jpg', discretization_step=5)
+
+pts.append([startx, starty])
+pts.append([goalx, goaly])
+# pts = pointCoordinates(kp_model) # Needs to be changed for different keypoints
+
+# graph, coordinates, N = graphCreation(pts, startx, starty, goalx, goaly, obstaclesList)
+graph, coordinates, N = graphCreation(pts, obstaclesList)
+adjacency_list = adjacencyListCreation(graph, N)
+
 pathListAstar = Astar.Graph(adjacency_list).a_star_algorithm(N-1, N, coordinates) # N-1 and N are numbers of start and final points
+pathListBiAstar = Bi_Astar.pathplanningBidirectionalAStar(adjacency_list, coordinates, N, N-1, N)
+pathListDjikstra = Djikstra.shortestPathFastDjikstra(adjacency_list, N)
+pathListRRT = RRT.pathplanningRRT(adjacency_list, coordinates, N, N-1, N)
 
 # Needs to be changed for different keypoints
-imageSave(img, kp_model, pathListDjikstra, coordinates, obstaclesList, '1Djikstra', cvAlgo)
-imageSave(img, kp_model, pathListAstar,  coordinates, obstaclesList, '1Astar', cvAlgo)
+imageSave(img, kp_model, pathListAstar,  coordinates, obstaclesList, 'A*', cvAlgo)
+imageSave(img, kp_model, pathListBiAstar, coordinates, obstaclesList, 'Bi-A*', cvAlgo)
+imageSave(img, kp_model, pathListDjikstra, coordinates, obstaclesList, 'Djikstra', cvAlgo)
+imageSave(img, kp_model, pathListRRT, coordinates, obstaclesList, 'RRT', cvAlgo)
