@@ -2,14 +2,19 @@ import cv2
 import numpy as np
 import time
 import Astar
-import Djikstra
+import Dijkstra
 import RRT
 import Bi_Astar
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import matplotlib.image as mpimg
 from bs4 import BeautifulSoup
 from PIL import Image
 
+
 startTime = time.time()
-img = cv2.imread('1_identified.jpg')
+image_path = '1_identified.jpg'
+img = cv2.imread(image_path)
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 akaze = cv2.AKAZE_create()
@@ -167,6 +172,79 @@ def image_discretization(image_path, discretization_step):
             pts.append([i, j])
     return pts, width, height
 
+def animate_path_on_image(image_path, coordinates, path, output_gif="animation.gif", interval=500, dpi=150):
+    """
+    Create an animation of a constructed path drawn over a given image background,
+    and save the animation as a high-quality gif.
+
+    Parameters:
+      image_path: str
+          Path to the background image file.
+      coordinates: list of [x, y]
+          List of vertex coordinates (index 0 is unused; vertices are indexed from 1..N).
+      path: list of int
+          List of vertex indices representing the constructed path from start to goal.
+      output_gif: str, optional
+          Filename for the output gif (default "animation.gif").
+      interval: int, optional
+          Time (in milliseconds) between frames of the animation (default 500).
+      dpi: int, optional
+          Dots per inch for the saved gif (default 150).
+    """
+    # Load the background image.
+    # img = mpimg.imread(image_path)
+    img = cv2.imread(image_path)
+    img = cv2.drawMarker(img, (coordinates[N][0], coordinates[N][1]),
+                           (255, 0, 0), 1, markerSize = 12, thickness=3)
+    img = cv2.circle(img, (coordinates[N - 1][0], coordinates[N - 1][1]),
+                       3, (255, 0, 0), thickness=3)
+
+    height, width = img.shape[0], img.shape[1]
+
+    # Create a figure and axis.
+    fig, ax = plt.subplots()
+
+    # Display the image as the background.
+    # Set extent so that the image covers [0, width] in x and [0, height] in y.
+    ax.imshow(img, extent=[0, width, height, 0])
+
+    # Extract the path coordinates.
+    path_coords = [coordinates[v] for v in path]
+    xs, ys = zip(*path_coords)
+
+    # Create an empty line and marker for the path.
+    line, = ax.plot([], [], 'r-', lw=2)
+    points, = ax.plot([], [], 'ro', markersize=3)
+
+    # Set the axis limits based on the image size.
+    ax.set_xlim(0, width)
+    ax.set_ylim(height, 0)
+    ax.set_title("Path Animation on Satellite Image")
+
+    # Initialization function for the animation.
+    def init():
+        line.set_data([], [])
+        points.set_data([], [])
+        return line, points
+
+    # Update function to draw more of the path at each frame.
+    def update(frame):
+        current_x = xs[:frame + 1]
+        current_y = ys[:frame + 1]
+        line.set_data(current_x, current_y)
+        points.set_data(current_x, current_y)
+        return line, points
+
+    # Create the animation.
+    ani = animation.FuncAnimation(fig, update, frames=len(xs), init_func=init,
+                                  interval=interval, blit=True, repeat=False)
+
+    # Save the animation as a gif using PillowWriter.
+    writer = animation.PillowWriter(fps=1000 / interval, metadata=dict(artist='PathPlanner'), bitrate=1800)
+    ani.save(output_gif, writer=writer, dpi=dpi)
+    plt.close(fig)
+    print(f"Animation saved as {output_gif}")
+
 
 startx = 30
 starty = 480
@@ -200,7 +278,7 @@ cvAlgo = 'AKAZE'
 # print(f'\n--- Feature detection Model: {cvAlgo} ---')
 print("\nFINDING THE PATH...")
 
-pts, width, height = image_discretization('1_identified.jpg', discretization_step=5)
+pts, width, height = image_discretization(image_path, discretization_step=5)
 
 pts.append([startx, starty])
 pts.append([goalx, goaly])
@@ -212,11 +290,15 @@ adjacency_list = adjacencyListCreation(graph, N)
 
 pathListAstar = Astar.Graph(adjacency_list).a_star_algorithm(N-1, N, coordinates) # N-1 and N are numbers of start and final points
 pathListBiAstar = Bi_Astar.pathplanningBidirectionalAStar(adjacency_list, coordinates, N, N-1, N)
-pathListDjikstra = Djikstra.shortestPathFastDjikstra(adjacency_list, N)
+pathListDijkstra = Dijkstra.shortestPathFastDijkstra(adjacency_list, N)
 pathListRRT = RRT.pathplanningRRT(adjacency_list, coordinates, N, N-1, N)
 
-# Needs to be changed for different keypoints
-imageSave(img, kp_model, pathListAstar,  coordinates, obstaclesList, 'A*', cvAlgo)
-imageSave(img, kp_model, pathListBiAstar, coordinates, obstaclesList, 'Bi-A*', cvAlgo)
-imageSave(img, kp_model, pathListDjikstra, coordinates, obstaclesList, 'Djikstra', cvAlgo)
-imageSave(img, kp_model, pathListRRT, coordinates, obstaclesList, 'RRT', cvAlgo)
+animate_path_on_image(image_path, coordinates, pathListAstar, output_gif="GIFs/A*.gif", interval=200)
+animate_path_on_image(image_path, coordinates, pathListBiAstar, output_gif="GIFs/Bi-A*.gif", interval=200)
+animate_path_on_image(image_path, coordinates, pathListDijkstra, output_gif="GIFs/Dijkstra.gif", interval=200)
+animate_path_on_image(image_path, coordinates, pathListRRT, output_gif="GIFs/RRTConnect.gif", interval=200)
+
+# imageSave(img, kp_model, pathListAstar,  coordinates, obstaclesList, 'A*', cvAlgo)
+# imageSave(img, kp_model, pathListBiAstar, coordinates, obstaclesList, 'Bi-A*', cvAlgo)
+# imageSave(img, kp_model, pathListDijkstra, coordinates, obstaclesList, 'Dijkstra', cvAlgo)
+# imageSave(img, kp_model, pathListRRT, coordinates, obstaclesList, 'RRT', cvAlgo)

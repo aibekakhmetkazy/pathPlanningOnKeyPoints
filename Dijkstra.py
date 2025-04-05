@@ -1,7 +1,7 @@
 import heapq
 
-#region Djikstra
-def shortestPathFastDjikstra(adjacency_list, N):
+#region Dijkstra
+def shortestPathFastDijkstra(adjacency_list, N):
 
     m = adjacency_list.copy()
     prev = [-1]*(N+1)
@@ -35,7 +35,7 @@ def shortestPathFastDjikstra(adjacency_list, N):
                 path(prev, pathByVertexes, f)
             return pathByVertexes[::-1]
         pathList = path(prev, pathByVertexes, f)
-        print("Djikstra's found a path:\n", pathList, end='\n')
+        print("Dijkstra's found a path:\n", pathList, end='\n')
         print('Total distance:', round(dist[f][0], 3))
         print('------------------------------------------------')
     return pathList
