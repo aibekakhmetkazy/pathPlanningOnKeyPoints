@@ -117,7 +117,7 @@ def pathplanningRRT(adjacency_list, coordinates, N, start=None, goal=None, max_i
                     print('Total distance:', round(total_distance, 3))
                     print('------------------------------------------------')
 
-                    return full_path
+                    return full_path, path_from_start, path_from_goal
         # ---- Swap the trees to alternate extension ----
         T_start, T_goal = T_goal, T_start
 

@@ -35,7 +35,6 @@ def imageShow(img, keypoints):
 def pointCoordinates(keypoints):
     return cv2.KeyPoint_convert(keypoints)
 
-### Here goes the creation of the graph edges ###
 def graphCreation(pts, startx, starty, finalx, finaly, obstaclesList):
     coordinates = [[]]
 
@@ -191,8 +190,6 @@ def animate_path_on_image(image_path, coordinates, path, output_gif="animation.g
       dpi: int, optional
           Dots per inch for the saved gif (default 150).
     """
-    # Load the background image.
-    # img = mpimg.imread(image_path)
     img = cv2.imread(image_path)
     img = cv2.drawMarker(img, (coordinates[N][0], coordinates[N][1]),
                            (255, 0, 0), 1, markerSize = 12, thickness=3)
@@ -245,6 +242,110 @@ def animate_path_on_image(image_path, coordinates, path, output_gif="animation.g
     plt.close(fig)
     print(f"Animation saved as {output_gif}")
 
+def animate_bidirectional_path_on_image(image_path, coordinates, path_forward, path_backward,
+                                        output_gif="bidirectional_animation.gif", interval=500, dpi=150):
+    """
+    Animate a bidirectional search (e.g., from Bidirectional A* or RRT-Connect)
+    that constructs two branches: one from the start and another from the goal,
+    growing toward the meeting point.
+
+    Parameters:
+      image_path: str
+          Path to the background image file.
+      coordinates: list of [x, y]
+          List of vertex coordinates (index 0 is unused; vertices are indexed from 1..N).
+      path_forward: list of int
+          List of vertex indices from start to the meeting point.
+      path_backward: list of int
+          List of vertex indices from the meeting point to the goal.
+          (It will be reversed so that the growth appears from the goal toward the meeting point.)
+      output_gif: str, optional
+          Filename for the output gif (default "bidirectional_animation.gif").
+      interval: int, optional
+          Time (in milliseconds) between frames of the animation (default 500).
+      dpi: int, optional
+          Dots per inch for the saved gif (default 150).
+    """
+    # Load the background image.
+    img = cv2.imread(image_path)
+    img = cv2.drawMarker(img, (coordinates[N][0], coordinates[N][1]),
+                           (255, 0, 0), 1, markerSize = 12, thickness=3)
+    img = cv2.circle(img, (coordinates[N - 1][0], coordinates[N - 1][1]),
+                       3, (255, 0, 0), thickness=3)
+
+    # height, width = img.shape[0], img.shape[1]
+    # img = mpimg.imread(image_path)
+    height, width = img.shape[0], img.shape[1]
+
+    # Create a figure and axis.
+    fig, ax = plt.subplots()
+    # Display the image as background (assume the image coordinate system is such that
+    # x ranges from 0 to width and y ranges from 0 to height).
+    ax.imshow(img, extent=[0, width, height, 0])
+
+    # Prepare the coordinates for the two branches.
+    # For the forward branch, extract coordinates from start to meeting point.
+    forward_coords = [coordinates[v] for v in path_forward]
+    f_xs, f_ys = zip(*forward_coords)
+
+    # For the backward branch, reverse it so that it will be drawn from goal to meeting point.
+    backward_branch = list(reversed(path_backward))
+    b_coords = [coordinates[v] for v in backward_branch]
+    b_xs, b_ys = zip(*b_coords)
+
+    # Create line objects for both branches.
+    # Here, we use one marker+line style for the forward branch and a different one for the backward branch.
+    forward_line, = ax.plot([], [], 'bo-', lw=2, markersize=3, label="Forward (start -> meeting)")
+    backward_line, = ax.plot([], [], 'go-', lw=2, markersize=3, label="Backward (goal -> meeting)")
+
+    # Optionally, set axis limits based on image dimensions.
+    ax.set_xlim(0, width)
+    ax.set_ylim(height, 0)
+    ax.set_title("Bidirectional Path Search Animation")
+    ax.legend(loc="upper right")
+
+    # Determine the total number of frames: use the larger branch length.
+    total_frames = max(len(f_xs), len(b_xs))
+
+    # Initialization function: clear both lines.
+    def init():
+        forward_line.set_data([], [])
+        backward_line.set_data([], [])
+        return forward_line, backward_line
+
+    # Update function: For each frame, show more of each branch.
+    def update(frame):
+        # For forward branch, if we haven't reached the end yet, show frame+1 points.
+        if frame < len(f_xs):
+            current_forward_x = f_xs[:frame + 1]
+            current_forward_y = f_ys[:frame + 1]
+        else:
+            # Otherwise, show the entire forward branch.
+            current_forward_x = f_xs
+            current_forward_y = f_ys
+        forward_line.set_data(current_forward_x, current_forward_y)
+
+        # For backward branch, similarly animate the branch growing from goal.
+        if frame < len(b_xs):
+            current_backward_x = b_xs[:frame + 1]
+            current_backward_y = b_ys[:frame + 1]
+        else:
+            current_backward_x = b_xs
+            current_backward_y = b_ys
+        backward_line.set_data(current_backward_x, current_backward_y)
+
+        return forward_line, backward_line
+
+    # Create the animation.
+    ani = animation.FuncAnimation(fig, update, frames=total_frames, init_func=init,
+                                  interval=interval, blit=True, repeat=False)
+
+    # Save the animation as a gif with high quality using PillowWriter.
+    writer = animation.PillowWriter(fps=1000 / interval, metadata=dict(artist='PathPlanner'), bitrate=1800)
+    ani.save(output_gif, writer=writer, dpi=dpi)
+    plt.close(fig)
+    print(f"Bidirectional path animation saved as {output_gif}")
+
 
 startx = 30
 starty = 480
@@ -288,17 +389,64 @@ pts.append([goalx, goaly])
 graph, coordinates, N = graphCreation(pts, obstaclesList)
 adjacency_list = adjacencyListCreation(graph, N)
 
-pathListAstar = Astar.Graph(adjacency_list).a_star_algorithm(N-1, N, coordinates) # N-1 and N are numbers of start and final points
-pathListBiAstar = Bi_Astar.pathplanningBidirectionalAStar(adjacency_list, coordinates, N, N-1, N)
-pathListDijkstra = Dijkstra.shortestPathFastDijkstra(adjacency_list, N)
-pathListRRT = RRT.pathplanningRRT(adjacency_list, coordinates, N, N-1, N)
 
-animate_path_on_image(image_path, coordinates, pathListAstar, output_gif="GIFs/A*.gif", interval=200)
-animate_path_on_image(image_path, coordinates, pathListBiAstar, output_gif="GIFs/Bi-A*.gif", interval=200)
-animate_path_on_image(image_path, coordinates, pathListDijkstra, output_gif="GIFs/Dijkstra.gif", interval=200)
-animate_path_on_image(image_path, coordinates, pathListRRT, output_gif="GIFs/RRTConnect.gif", interval=200)
+algo_paths = [
+    {
+        "name": "A*",
+        "gif": "GIFs/A*.gif",
+        "path_list": Astar.Graph(adjacency_list).a_star_algorithm(N - 1, N, coordinates)
+    },
+    # {
+    #     "name": "Dijkstra",
+    #     "gif": "GIFs/Dijkstra.gif",
+    #     "path_list": Dijkstra.shortestPathFastDijkstra(adjacency_list, N)
+    # },
+    # {
+    #     "name": "RRT",
+    #     "gif": "GIFs/RRTConnect.gif",
+    #     "path_list": RRT.pathplanningRRT(adjacency_list, coordinates, N, N - 1, N)
+    # },
+    # {
+    #     "name": "Bi-A*",
+    #     "gif": "GIFs/Bi-A*.gif",
+    #     "path_list": Bi_Astar.pathplanningBidirectionalAStar(adjacency_list, coordinates, N, N - 1, N)
+    # }
+]
 
-# imageSave(img, kp_model, pathListAstar,  coordinates, obstaclesList, 'A*', cvAlgo)
-# imageSave(img, kp_model, pathListBiAstar, coordinates, obstaclesList, 'Bi-A*', cvAlgo)
-# imageSave(img, kp_model, pathListDijkstra, coordinates, obstaclesList, 'Dijkstra', cvAlgo)
-# imageSave(img, kp_model, pathListRRT, coordinates, obstaclesList, 'RRT', cvAlgo)
+
+for algo in algo_paths:
+    if algo["name"] in ["RRT", "Bi-A*"]:
+        animate_bidirectional_path_on_image(
+            image_path,
+            coordinates,
+            algo["path_list"][1],
+            algo["path_list"][2],
+            output_gif=algo["gif"],
+            interval=200
+        )
+        imageSave(
+            img,
+            kp_model,
+            algo["path_list"][0],
+            coordinates,
+            obstaclesList,
+            algo["name"],
+            cvAlgo
+        )
+    else:
+        animate_path_on_image(
+            image_path,
+            coordinates,
+            algo["path_list"],
+            output_gif=algo["gif"],
+            interval=200
+        )
+        imageSave(
+            img,
+            kp_model,
+            algo["path_list"],
+            coordinates,
+            obstaclesList,
+            algo["name"],
+            cvAlgo
+        )

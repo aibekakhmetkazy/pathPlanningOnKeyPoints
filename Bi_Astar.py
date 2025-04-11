@@ -148,14 +148,14 @@ def pathplanningBidirectionalAStar(adjacency_list, coordinates, N, start=None, g
 
     # Reconstruct the path from meeting_node to goal.
     path_backward = []
+    path_backward.append(meeting_node)
     node = came_from_backward.get(meeting_node)
     while node is not None:
         path_backward.append(node)
         node = came_from_backward.get(node)
 
     # Concatenate the forward and backward paths (avoid duplicating the meeting node).
-    full_path = path_forward + path_backward
-
+    full_path = path_forward + path_backward[1:]
     # Compute the total Euclidean distance along the path.
     total_distance = 0.0
     for i in range(len(full_path) - 1):
@@ -164,15 +164,4 @@ def pathplanningBidirectionalAStar(adjacency_list, coordinates, N, start=None, g
     print("Bidirectional A* found a path:\n", full_path, end='\n')
     print("Total distance:", round(total_distance, 3), end='\n')
     print('------------------------------------------------')
-    return full_path
-
-# Example usage:
-# Assuming 'adjacency_list', 'coordinates', and 'N' are already defined from your grid and fly-around pixels,
-# with start defaulting to N-1 and goal to N.
-#
-# path, dist = pathplanningBidirectionalAStar(adjacency_list, coordinates, N)
-# if path is not None:
-#     print("Bidirectional A* found a path:", path)
-#     print("Total distance:", dist)
-# else:
-#     print("No path found.")
+    return full_path, path_forward, path_backward
