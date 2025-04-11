@@ -396,21 +396,21 @@ algo_paths = [
         "gif": "GIFs/A*.gif",
         "path_list": Astar.Graph(adjacency_list).a_star_algorithm(N - 1, N, coordinates)
     },
-    # {
-    #     "name": "Dijkstra",
-    #     "gif": "GIFs/Dijkstra.gif",
-    #     "path_list": Dijkstra.shortestPathFastDijkstra(adjacency_list, N)
-    # },
-    # {
-    #     "name": "RRT",
-    #     "gif": "GIFs/RRTConnect.gif",
-    #     "path_list": RRT.pathplanningRRT(adjacency_list, coordinates, N, N - 1, N)
-    # },
-    # {
-    #     "name": "Bi-A*",
-    #     "gif": "GIFs/Bi-A*.gif",
-    #     "path_list": Bi_Astar.pathplanningBidirectionalAStar(adjacency_list, coordinates, N, N - 1, N)
-    # }
+    {
+        "name": "Dijkstra",
+        "gif": "GIFs/Dijkstra.gif",
+        "path_list": Dijkstra.shortestPathFastDijkstra(adjacency_list, N)
+    },
+    {
+        "name": "RRT",
+        "gif": "GIFs/RRTConnect.gif",
+        "path_list": RRT.pathplanningRRT(adjacency_list, coordinates, N, N - 1, N)
+    },
+    {
+        "name": "Bi-A*",
+        "gif": "GIFs/Bi-A*.gif",
+        "path_list": Bi_Astar.pathplanningBidirectionalAStar(adjacency_list, coordinates, N, N - 1, N)
+    }
 ]
 
 
