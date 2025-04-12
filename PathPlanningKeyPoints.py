@@ -13,8 +13,8 @@ from PIL import Image
 
 
 startTime = time.time()
-image_path = '1_identified.jpg'
-img = cv2.imread(image_path)
+img_path = '1_identified.jpg'
+img = cv2.imread(img_path)
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 akaze = cv2.AKAZE_create()
@@ -128,11 +128,10 @@ def imageSave(img, keypoints, pathList, points, obstaclesList, algoName, cvAlgo)
     obs = image.copy()
 
     for obstacle in obstaclesList:
-        obs = cv2.circle(obs, (int(obstacle[0]),
-                                     int(obstacle[1])), obstacle[2], (250, 50, 200), -1)
-        newimg = cv2.addWeighted(obs, 0.7, image, 0.3, 0)
+        obs = cv2.circle(obs, (int(obstacle[0]), int(obstacle[1])), obstacle[2], (250, 50, 200), -1)
 
-    cv2.imwrite('Images/'+algoName+'.png', newimg)
+    image = cv2.addWeighted(obs, 0.7, image, 0.3, 0)
+    cv2.imwrite('Images/'+algoName+'.png', image)
     # print("Execution of "+algoName+" algorithm:", str(round((time.time() - startTime), 2))+'s')
 
 def graphCreation(pts, obstacles_list):
@@ -171,7 +170,7 @@ def image_discretization(image_path, discretization_step):
             pts.append([i, j])
     return pts, width, height
 
-def animate_path_on_image(image_path, coordinates, path, output_gif="animation.gif", interval=500, dpi=150):
+def animate_path_on_image(image_path, coordinates, obstaclesList, path, output_gif="animation.gif", interval=500, dpi=150):
     """
     Create an animation of a constructed path drawn over a given image background,
     and save the animation as a high-quality gif.
@@ -190,11 +189,16 @@ def animate_path_on_image(image_path, coordinates, path, output_gif="animation.g
       dpi: int, optional
           Dots per inch for the saved gif (default 150).
     """
-    img = cv2.imread(image_path)
-    img = cv2.drawMarker(img, (coordinates[N][0], coordinates[N][1]),
-                           (255, 0, 0), 1, markerSize = 12, thickness=3)
-    img = cv2.circle(img, (coordinates[N - 1][0], coordinates[N - 1][1]),
-                       3, (255, 0, 0), thickness=3)
+    img_bgr = cv2.imread(image_path)
+    img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    img = cv2.drawMarker(img, (coordinates[N][0], coordinates[N][1]), (255, 0, 0), 1, markerSize=12, thickness=3)
+    img = cv2.circle(img, (coordinates[N - 1][0], coordinates[N - 1][1]), 3, (255, 0, 0), thickness=3)
+
+    obs = img.copy()
+    for obstacle in obstaclesList:
+        obs = cv2.circle(obs, (int(obstacle[0]), int(obstacle[1])), obstacle[2], (250, 50, 200), -1)
+
+    img = cv2.addWeighted(obs, 0.7, img, 0.3, 0)
 
     height, width = img.shape[0], img.shape[1]
 
@@ -210,8 +214,7 @@ def animate_path_on_image(image_path, coordinates, path, output_gif="animation.g
     xs, ys = zip(*path_coords)
 
     # Create an empty line and marker for the path.
-    line, = ax.plot([], [], 'r-', lw=2)
-    points, = ax.plot([], [], 'ro', markersize=3)
+    line, = ax.plot([], [], 'ro-', lw=2, markersize=2)
 
     # Set the axis limits based on the image size.
     ax.set_xlim(0, width)
@@ -221,16 +224,14 @@ def animate_path_on_image(image_path, coordinates, path, output_gif="animation.g
     # Initialization function for the animation.
     def init():
         line.set_data([], [])
-        points.set_data([], [])
-        return line, points
+        return line,
 
     # Update function to draw more of the path at each frame.
     def update(frame):
         current_x = xs[:frame + 1]
         current_y = ys[:frame + 1]
         line.set_data(current_x, current_y)
-        points.set_data(current_x, current_y)
-        return line, points
+        return line,
 
     # Create the animation.
     ani = animation.FuncAnimation(fig, update, frames=len(xs), init_func=init,
@@ -242,7 +243,7 @@ def animate_path_on_image(image_path, coordinates, path, output_gif="animation.g
     plt.close(fig)
     print(f"Animation saved as {output_gif}")
 
-def animate_bidirectional_path_on_image(image_path, coordinates, path_forward, path_backward,
+def animate_bidirectional_path_on_image(image_path, coordinates, obstaclesList, path_forward, path_backward,
                                         output_gif="bidirectional_animation.gif", interval=500, dpi=150):
     """
     Animate a bidirectional search (e.g., from Bidirectional A* or RRT-Connect)
@@ -267,14 +268,17 @@ def animate_bidirectional_path_on_image(image_path, coordinates, path_forward, p
           Dots per inch for the saved gif (default 150).
     """
     # Load the background image.
-    img = cv2.imread(image_path)
-    img = cv2.drawMarker(img, (coordinates[N][0], coordinates[N][1]),
-                           (255, 0, 0), 1, markerSize = 12, thickness=3)
-    img = cv2.circle(img, (coordinates[N - 1][0], coordinates[N - 1][1]),
-                       3, (255, 0, 0), thickness=3)
+    img_bgr = cv2.imread(image_path)
+    img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    img = cv2.drawMarker(img, (coordinates[N][0], coordinates[N][1]), (255, 0, 0), 1, markerSize = 12, thickness=3)
+    img = cv2.circle(img, (coordinates[N - 1][0], coordinates[N - 1][1]), 3, (255, 0, 0), thickness=3)
 
-    # height, width = img.shape[0], img.shape[1]
-    # img = mpimg.imread(image_path)
+    obs = img.copy()
+    for obstacle in obstaclesList:
+        obs = cv2.circle(obs, (int(obstacle[0]), int(obstacle[1])), obstacle[2], (250, 50, 200), -1)
+
+    img = cv2.addWeighted(obs, 0.7, img, 0.3, 0)
+
     height, width = img.shape[0], img.shape[1]
 
     # Create a figure and axis.
@@ -295,8 +299,8 @@ def animate_bidirectional_path_on_image(image_path, coordinates, path_forward, p
 
     # Create line objects for both branches.
     # Here, we use one marker+line style for the forward branch and a different one for the backward branch.
-    forward_line, = ax.plot([], [], 'bo-', lw=2, markersize=3, label="Forward (start -> meeting)")
-    backward_line, = ax.plot([], [], 'go-', lw=2, markersize=3, label="Backward (goal -> meeting)")
+    forward_line, = ax.plot([], [], 'ro-', lw=2, markersize=2, label="Forward (start -> meeting)")
+    backward_line, = ax.plot([], [], 'bo-', lw=2, markersize=2, label="Backward (goal -> meeting)")
 
     # Optionally, set axis limits based on image dimensions.
     ax.set_xlim(0, width)
@@ -379,7 +383,7 @@ cvAlgo = 'AKAZE'
 # print(f'\n--- Feature detection Model: {cvAlgo} ---')
 print("\nFINDING THE PATH...")
 
-pts, width, height = image_discretization(image_path, discretization_step=5)
+pts, width, height = image_discretization(img_path, discretization_step=5)
 
 pts.append([startx, starty])
 pts.append([goalx, goaly])
@@ -413,12 +417,12 @@ algo_paths = [
     }
 ]
 
-
 for algo in algo_paths:
     if algo["name"] in ["RRT", "Bi-A*"]:
         animate_bidirectional_path_on_image(
-            image_path,
+            img_path,
             coordinates,
+            obstaclesList,
             algo["path_list"][1],
             algo["path_list"][2],
             output_gif=algo["gif"],
@@ -435,8 +439,9 @@ for algo in algo_paths:
         )
     else:
         animate_path_on_image(
-            image_path,
+            img_path,
             coordinates,
+            obstaclesList,
             algo["path_list"],
             output_gif=algo["gif"],
             interval=200
