@@ -7,7 +7,6 @@ import RRT
 import Bi_Astar
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import matplotlib.image as mpimg
 from bs4 import BeautifulSoup
 from PIL import Image
 
@@ -15,8 +14,8 @@ from PIL import Image
 startTime = time.time()
 img_path = '1_identified.jpg'
 img = cv2.imread(img_path)
-gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
+gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 akaze = cv2.AKAZE_create()
 kp_akaze, des_akaze = akaze.detectAndCompute(gray, None)
 
@@ -170,6 +169,7 @@ def image_discretization(image_path, discretization_step):
             pts.append([i, j])
     return pts, width, height
 
+
 def animate_path_on_image(image_path, coordinates, obstaclesList, path, output_gif="animation.gif", interval=500, dpi=150):
     """
     Create an animation of a constructed path drawn over a given image background,
@@ -191,35 +191,34 @@ def animate_path_on_image(image_path, coordinates, obstaclesList, path, output_g
     """
     img_bgr = cv2.imread(image_path)
     img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-    img = cv2.drawMarker(img, (coordinates[N][0], coordinates[N][1]), (255, 0, 0), 1, markerSize=12, thickness=3)
-    img = cv2.circle(img, (coordinates[N - 1][0], coordinates[N - 1][1]), 3, (255, 0, 0), thickness=3)
 
-    obs = img.copy()
+    obs = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
     for obstacle in obstaclesList:
-        obs = cv2.circle(obs, (int(obstacle[0]), int(obstacle[1])), obstacle[2], (250, 50, 200), -1)
+        obs = cv2.circle(obs, (int(obstacle[0]), int(obstacle[1])), obstacle[2], (250, 0, 0), -1)
 
     img = cv2.addWeighted(obs, 0.7, img, 0.3, 0)
 
-    height, width = img.shape[0], img.shape[1]
+    cv2.drawMarker(img, (coordinates[N][0], coordinates[N][1]), (0, 0, 0), 1, markerSize=12, thickness=3)
+    cv2.circle(img, (coordinates[N - 1][0], coordinates[N - 1][1]), 3, (0, 0, 0), thickness=3)
 
     # Create a figure and axis.
     fig, ax = plt.subplots()
 
     # Display the image as the background.
     # Set extent so that the image covers [0, width] in x and [0, height] in y.
-    ax.imshow(img, extent=[0, width, height, 0])
+    ax.imshow(img)
 
     # Extract the path coordinates.
     path_coords = [coordinates[v] for v in path]
     xs, ys = zip(*path_coords)
 
     # Create an empty line and marker for the path.
-    line, = ax.plot([], [], 'ro-', lw=2, markersize=2)
+    line, = ax.plot([], [], 'ro-', lw=2, ms=2)
 
     # Set the axis limits based on the image size.
     ax.set_xlim(0, width)
     ax.set_ylim(height, 0)
-    ax.set_title("Path Animation on Satellite Image")
+    ax.set_title("Path Search Animation")
 
     # Initialization function for the animation.
     def init():
@@ -238,7 +237,7 @@ def animate_path_on_image(image_path, coordinates, obstaclesList, path, output_g
                                   interval=interval, blit=True, repeat=False)
 
     # Save the animation as a gif using PillowWriter.
-    writer = animation.PillowWriter(fps=1000 / interval, metadata=dict(artist='PathPlanner'), bitrate=1800)
+    writer = animation.PillowWriter(fps=1000 // interval, metadata=dict(artist='PathPlanner'), bitrate=-1)
     ani.save(output_gif, writer=writer, dpi=dpi)
     plt.close(fig)
     print(f"Animation saved as {output_gif}")
@@ -270,22 +269,21 @@ def animate_bidirectional_path_on_image(image_path, coordinates, obstaclesList, 
     # Load the background image.
     img_bgr = cv2.imread(image_path)
     img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-    img = cv2.drawMarker(img, (coordinates[N][0], coordinates[N][1]), (255, 0, 0), 1, markerSize = 12, thickness=3)
-    img = cv2.circle(img, (coordinates[N - 1][0], coordinates[N - 1][1]), 3, (255, 0, 0), thickness=3)
 
     obs = img.copy()
     for obstacle in obstaclesList:
-        obs = cv2.circle(obs, (int(obstacle[0]), int(obstacle[1])), obstacle[2], (250, 50, 200), -1)
+        obs = cv2.circle(obs, (int(obstacle[0]), int(obstacle[1])), obstacle[2], (250, 0, 0), -1)
 
     img = cv2.addWeighted(obs, 0.7, img, 0.3, 0)
 
-    height, width = img.shape[0], img.shape[1]
+    cv2.drawMarker(img, (coordinates[N][0], coordinates[N][1]), (0, 0, 0), 1, markerSize=12, thickness=3)
+    cv2.circle(img, (coordinates[N - 1][0], coordinates[N - 1][1]), 3, (0, 0, 0), thickness=3)
 
     # Create a figure and axis.
     fig, ax = plt.subplots()
     # Display the image as background (assume the image coordinate system is such that
     # x ranges from 0 to width and y ranges from 0 to height).
-    ax.imshow(img, extent=[0, width, height, 0])
+    ax.imshow(img)
 
     # Prepare the coordinates for the two branches.
     # For the forward branch, extract coordinates from start to meeting point.
@@ -299,8 +297,8 @@ def animate_bidirectional_path_on_image(image_path, coordinates, obstaclesList, 
 
     # Create line objects for both branches.
     # Here, we use one marker+line style for the forward branch and a different one for the backward branch.
-    forward_line, = ax.plot([], [], 'ro-', lw=2, markersize=2, label="Forward (start -> meeting)")
-    backward_line, = ax.plot([], [], 'bo-', lw=2, markersize=2, label="Backward (goal -> meeting)")
+    forward_line, = ax.plot([], [], 'ro-', lw=2, ms=2, label="Forward (start -> meeting)")
+    backward_line, = ax.plot([], [], 'ko-', lw=2, ms=2, label="Backward (goal -> meeting)")
 
     # Optionally, set axis limits based on image dimensions.
     ax.set_xlim(0, width)
@@ -345,7 +343,7 @@ def animate_bidirectional_path_on_image(image_path, coordinates, obstaclesList, 
                                   interval=interval, blit=True, repeat=False)
 
     # Save the animation as a gif with high quality using PillowWriter.
-    writer = animation.PillowWriter(fps=1000 / interval, metadata=dict(artist='PathPlanner'), bitrate=1800)
+    writer = animation.PillowWriter(fps=1000 // interval, metadata=dict(artist='PathPlanner'), bitrate=-1)
     ani.save(output_gif, writer=writer, dpi=dpi)
     plt.close(fig)
     print(f"Bidirectional path animation saved as {output_gif}")
@@ -426,7 +424,7 @@ for algo in algo_paths:
             algo["path_list"][1],
             algo["path_list"][2],
             output_gif=algo["gif"],
-            interval=200
+            interval=170
         )
         imageSave(
             img,
